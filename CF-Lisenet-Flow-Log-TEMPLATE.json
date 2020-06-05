@@ -1,0 +1,110 @@
+{
+   "AWSTemplateFormatVersion":"2010-09-09",
+   "Description":"Lisenet-VPC-FLOW-LOG",
+   "Parameters":{
+      "ManageFlowLog":{
+         "Description":"Whether flow log should be created or deleted.",
+         "Type":"String",
+         "Default":"yes",
+         "AllowedValues":[
+            "yes",
+            "no"
+         ],
+         "ConstraintDescription":"Value must be yes or no."
+      },
+      "S3BucketName":{
+         "Description":"S3 bucket to store flow logs.",
+         "Type":"String",
+         "MinLength":"10",
+         "MaxLength":"100",
+         "Default":"cf-lisenet-vpc-flow-logs",
+         "ConstraintDescription":"Must be a valid bucket name."
+      },
+      "VPC1":{
+         "Description":"VPC1 ID Lisenet-VPC.",
+         "Type":"String",
+         "MinLength":"21",
+         "MaxLength":"21",
+         "Default":"vpc-02169908473a69b64",
+         "ConstraintDescription":"Must be a valid VPC id."
+      }
+   },
+   "Conditions":{
+      "SetFlowLog":{
+         "Fn::Equals":[
+            {
+               "Ref":"ManageFlowLog"
+            },
+            "yes"
+         ]
+      }
+   },
+   "Metadata":{
+      "AWS::CloudFormation::Interface":{
+         "ParameterGroups":[
+            {
+               "Label":{
+                  "default":"Flow log"
+               },
+               "Parameters":[
+                  "ManageFlowLog"
+               ]
+            },
+            {
+               "Label":{
+                  "default":"VPC IDs"
+               },
+               "Parameters":[
+                  "VPC1"
+               ]
+            },
+            {
+               "Label":{
+                  "default":"S3 Bucket to store flow logs"
+               },
+               "Parameters":[
+                  "S3BucketName"
+               ]
+            }
+         ]
+      }
+   },
+   "Resources":{
+      "S3Bucket":{
+         "Type":"AWS::S3::Bucket",
+         "Condition":"SetFlowLog",
+         "Properties":{
+            "BucketName":{
+               "Ref":"S3BucketName"
+            },
+            "PublicAccessBlockConfiguration":{
+               "BlockPublicAcls":"true",
+               "BlockPublicPolicy":"true",
+               "IgnorePublicAcls":"true",
+               "RestrictPublicBuckets":"true"
+            }
+         }
+      },
+      "FlowLog1":{
+         "Type":"AWS::EC2::FlowLog",
+         "Condition":"SetFlowLog",
+         "DependsOn":"S3Bucket",
+         "Properties":{
+            "LogDestinationType":"s3",
+            "LogDestination":{
+               "Fn::GetAtt":[
+                  "S3Bucket",
+                  "Arn"
+               ]
+            },
+            "ResourceId":{
+               "Ref":"VPC1"
+            },
+            "ResourceType":"VPC",
+            "TrafficType":"REJECT"
+         }
+      }
+   },
+   "Outputs":{
+   }
+}
